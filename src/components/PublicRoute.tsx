@@ -1,11 +1,14 @@
 import { Navigate, Outlet } from "react-router-dom";
+
 import { useAuth } from "@/contexts/AuthContext";
+
+import { Loader } from "./common/loader";
 
 export const PublicRoute = () => {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div className="p-4 text-center">Loading...</div>;
+    return <Loader />;
   }
 
   if (user) {

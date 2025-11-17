@@ -2,20 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { authApi } from "@/api/authApi";
 import { useNavigate } from "react-router-dom";
 
-interface User {
-  _id: string;
-  name: string;
-  email: string;
-  role: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
-}
+import { AuthContextType } from "@/types/auth";
+import { User } from "@/types/user";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 

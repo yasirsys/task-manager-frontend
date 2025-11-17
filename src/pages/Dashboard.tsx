@@ -10,33 +10,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { TaskStatus, TaskPriority } from "@/constants/enum";
-import { dashboardApi } from "@/api/dashboardApi";
+
 import { trimText } from "@/utils/textUtils";
+import { CardStatistics, Task } from "@/types/dashboard";
 
-interface Task {
-  _id: string;
-  title: string;
-  status: TaskStatus;
-  priority: TaskPriority;
-  assignedTo?: string;
-  updatedAt: string;
-}
-
-interface User {
-  _id: string;
-  name: string;
-  email: string;
-  status: "active" | "inactive";
-}
-
-interface CardStatistics {
-  totalTasks: number;
-  totalCompletedTasks: number;
-  totalInProgressTasks: number;
-  totalUsers: number;
-  totalActiveUsers: number;
-  taskCompletionPercentage: number;
-}
+import { dashboardApi } from "@/api/dashboardApi";
 
 export default function Dashboard() {
   const [cardStatistics, setCardStatistics] = useState<CardStatistics>({
@@ -78,6 +56,7 @@ export default function Dashboard() {
 
   if (loading)
     return <div className="text-center py-20">Loading dashboard...</div>;
+
   if (error)
     return <div className="text-center py-20 text-red-500">{error}</div>;
 

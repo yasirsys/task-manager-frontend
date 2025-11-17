@@ -29,38 +29,43 @@ import {
 } from "@/components/ui/table";
 
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "../components/common/confirmationDialog";
 
 import { useToast } from "@/hooks/use-toast";
 
-import { userApi } from "@/api/userApi";
-
 import { UserRole, UserStatus } from "@/constants/enum";
 import { isValidEmail, isValidPassword } from "@/utils/validation";
-import { ConfirmDialog } from "@/components/common/confirmationDialog";
 
-type AppUser = {
-  _id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  status: UserStatus;
+import { userApi } from "@/api/userApi";
+
+import { User } from "@/types/user";
+
+const emptyState = {
+  name: "",
+  email: "",
+  password: "",
+  role: "user" as User["role"],
+  status: "active" as User["status"],
 };
 
 export default function Users() {
   const { toast } = useToast();
 
-  const [users, setUsers] = useState<AppUser[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState(emptyState);
+
+  const [users, setUsers] = useState<User[]>([]);
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<AppUser | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [loadingType, setLoadingType] = useState<
+    "add" | "edit" | "delete" | null
+  >(null);
 
+  const [usersLoading, setUsersLoading] = useState(false);
   const [pagination, setPagination] = useState({
     skip: 0,
     total: 0,
@@ -69,17 +74,9 @@ export default function Users() {
     limit: 5,
   });
 
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    role: "user" as AppUser["role"],
-    status: "active" as AppUser["status"],
-  });
-
   // --- Fetch all users ---
   const fetchUsers = async (skip: number = 0, limit: number = 5) => {
-    setLoading(true);
+    setUsersLoading(true);
     try {
       const res = await userApi.getAllPaginated(skip, limit);
       const { users = [], pagination } = res.data;
@@ -93,7 +90,7 @@ export default function Users() {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setUsersLoading(false);
     }
   };
 
@@ -102,7 +99,7 @@ export default function Users() {
   }, [pagination.skip, pagination.limit]);
 
   // --- Create user ---
-  const handleAdd = async () => {
+  const handleCreateUser = async () => {
     if (!formData.name || !formData.email) {
       toast({ title: "Name and email are required", variant: "destructive" });
       return;
@@ -122,7 +119,7 @@ export default function Users() {
           "Password must have min length 8, include at least one uppercase letter, one lowercase letter, and one special character.",
         variant: "destructive",
       });
-
+    setLoadingType("add");
     try {
       await userApi.create(formData);
       toast({ title: "User created" });
@@ -142,12 +139,14 @@ export default function Users() {
         description: err?.response?.data?.message || "Please try again",
         variant: "destructive",
       });
+    } finally {
+      setLoadingType(null);
     }
   };
 
   // --- Edit user ---
-  const openEditDialog = (user: AppUser) => {
-    setEditingUser(user);
+  const openEditDialog = (user: User) => {
+    setSelectedUserId(user._id);
     setFormData({
       name: user.name,
       email: user.email,
@@ -158,11 +157,12 @@ export default function Users() {
     setIsEditDialogOpen(true);
   };
 
-  const handleEdit = async () => {
-    if (!editingUser) return;
+  const handleUpdateUser = async () => {
+    if (!selectedUserId) return;
 
+    setLoadingType("edit");
     try {
-      await userApi.update(editingUser._id, {
+      await userApi.update(selectedUserId, {
         name: formData.name,
         email: formData.email,
         role: formData.role,
@@ -170,7 +170,7 @@ export default function Users() {
       });
       toast({ title: "User updated" });
       setIsEditDialogOpen(false);
-      setEditingUser(null);
+      setSelectedUserId(null);
       await fetchUsers(pagination.skip, pagination.limit);
     } catch (err: any) {
       console.error(err);
@@ -179,20 +179,22 @@ export default function Users() {
         description: err?.response?.data?.message || "Please try again",
         variant: "destructive",
       });
+    } finally {
+      setLoadingType(null);
     }
   };
 
   const confirmDeleteUser = (userId: string) => {
-    setUserToDelete(userId);
+    setSelectedUserId(userId);
     setConfirmDialogOpen(true);
   };
 
   // --- Delete user ---
   const handleDeleteUser = async () => {
-    if (!userToDelete) return;
-    setDeleting(true);
+    if (!selectedUserId) return;
+    setLoadingType("delete");
     try {
-      await userApi.delete(userToDelete);
+      await userApi.delete(selectedUserId);
       toast({ title: "User deleted" });
       await fetchUsers(0, pagination.limit);
     } catch (err: any) {
@@ -203,16 +205,15 @@ export default function Users() {
         variant: "destructive",
       });
     } finally {
-      setDeleting(false);
+      setLoadingType(null);
       setConfirmDialogOpen(false);
-      setUserToDelete(null);
+      setSelectedUserId(null);
     }
   };
 
   const currentPage = Math.floor(pagination.skip / pagination.limit) + 1;
   const totalPages = pagination.totalPages;
 
-  console.log("users", users);
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -224,9 +225,16 @@ export default function Users() {
         </div>
 
         {/* Add User Dialog */}
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        {/* ToDo: Make This Modal Reusable Component */}
+        <Dialog
+          open={isAddDialogOpen}
+          onOpenChange={(value) => {
+            if (value) setFormData(emptyState);
+            setIsAddDialogOpen(value);
+          }}
+        >
           <DialogTrigger asChild>
-            <Button disabled={loading}>
+            <Button disabled={usersLoading}>
               <Plus className="mr-2 h-4 w-4" />
               Add User
             </Button>
@@ -291,7 +299,7 @@ export default function Users() {
                   <Label htmlFor="role">Role</Label>
                   <Select
                     value={formData.role}
-                    onValueChange={(value: AppUser["role"]) =>
+                    onValueChange={(value: User["role"]) =>
                       setFormData({ ...formData, role: value })
                     }
                   >
@@ -307,7 +315,7 @@ export default function Users() {
                   <Label htmlFor="status">Status</Label>
                   <Select
                     value={formData.status}
-                    onValueChange={(value: AppUser["status"]) =>
+                    onValueChange={(value: User["status"]) =>
                       setFormData({ ...formData, status: value })
                     }
                   >
@@ -321,8 +329,12 @@ export default function Users() {
                   </Select>
                 </div>
               </div>
-              <Button onClick={handleAdd} className="w-full">
-                Create User
+              <Button
+                onClick={handleCreateUser}
+                disabled={loadingType === "add"}
+                className="w-full"
+              >
+                {loadingType === "add" ? "Creating..." : "Create User"}
               </Button>
             </div>
           </DialogContent>
@@ -342,7 +354,7 @@ export default function Users() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
+            {usersLoading ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8">
                   Loading users...
@@ -403,7 +415,7 @@ export default function Users() {
         </Table>
 
         {/* Pagination */}
-        {!loading && users && users.length ? (
+        {!usersLoading && users && users.length ? (
           <div className="flex justify-center items-center gap-2 p-4 border-t">
             {/* Previous Button */}
             <Button
@@ -484,6 +496,7 @@ export default function Users() {
       </div>
 
       {/* Edit Dialog */}
+      {/* ToDo: Make This Modal Reusable Component */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -526,7 +539,7 @@ export default function Users() {
                 <Label htmlFor="edit-role">Role</Label>
                 <Select
                   value={formData.role}
-                  onValueChange={(value: AppUser["role"]) =>
+                  onValueChange={(value: User["role"]) =>
                     setFormData({ ...formData, role: value })
                   }
                 >
@@ -542,7 +555,7 @@ export default function Users() {
                 <Label htmlFor="edit-status">Status</Label>
                 <Select
                   value={formData.status}
-                  onValueChange={(value: AppUser["status"]) =>
+                  onValueChange={(value: User["status"]) =>
                     setFormData({ ...formData, status: value })
                   }
                 >
@@ -556,8 +569,12 @@ export default function Users() {
                 </Select>
               </div>
             </div>
-            <Button onClick={handleEdit} className="w-full">
-              Update User
+            <Button
+              onClick={handleUpdateUser}
+              disabled={loadingType === "edit"}
+              className="w-full"
+            >
+              {loadingType === "edit" ? "Updating…" : "Update User"}
             </Button>
           </div>
         </DialogContent>
@@ -570,7 +587,7 @@ export default function Users() {
         cancelText="Cancel"
         onConfirm={handleDeleteUser}
         onCancel={() => setConfirmDialogOpen(false)}
-        loading={deleting}
+        loading={loadingType === "delete"}
       />
     </div>
   );

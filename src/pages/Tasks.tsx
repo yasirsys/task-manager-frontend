@@ -36,34 +36,36 @@ import { tasksApi } from "@/api/taskApi";
 import { userApi } from "@/api/userApi";
 
 import { TaskPriority, TaskStatus } from "@/constants/enum";
-import { Task } from "@/constants/interface";
+import { Task } from "@/types/task";
+
 import { ConfirmDialog } from "@/components/common/confirmationDialog";
+
+const emptyForm = {
+  title: "",
+  description: "",
+  status: TaskStatus.PENDING,
+  priority: TaskPriority.MEDIUM,
+  assignedTo: "",
+};
 
 export default function Tasks() {
   const { toast } = useToast();
 
-  // UI state
-  const [users, setUsers] = useState<Array<{ _id: string; name: string }>>([]);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [updating, setUpdating] = useState(false);
-
-  const emptyForm = {
-    title: "",
-    description: "",
-    status: TaskStatus.PENDING,
-    priority: TaskPriority.MEDIUM,
-    assignedTo: "",
-  };
   const [formData, setFormData] = useState(emptyForm);
 
+  const [users, setUsers] = useState<Array<{ _id: string; name: string }>>([]);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [loadingType, setLoadingType] = useState<
+    "add" | "edit" | "delete" | null
+  >(null);
+
   // pagination & loading
-  const [loading, setLoading] = useState<boolean>(false);
+  const [tasksLoading, setTasksLoading] = useState<boolean>(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [pagination, setPagination] = useState({
     skip: 0,
@@ -87,7 +89,7 @@ export default function Tasks() {
   }, []);
   // Fetch tasks on page load
   const fetchTasks = async (skip: number, limit: number) => {
-    setLoading(true);
+    setTasksLoading(true);
     try {
       const response = await tasksApi.getTasks(skip, limit);
       const { tasks = [], pagination } = response.data;
@@ -101,7 +103,7 @@ export default function Tasks() {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setTasksLoading(false);
     }
   };
 
@@ -116,7 +118,7 @@ export default function Tasks() {
       return;
     }
 
-    setCreating(true);
+    setLoadingType("add");
     try {
       await tasksApi.createTask(formData);
       toast({ title: "Task created" });
@@ -131,19 +133,19 @@ export default function Tasks() {
         variant: "destructive",
       });
     } finally {
-      setCreating(false);
+      setLoadingType(null);
     }
   };
 
   const handleEdit = async () => {
-    if (!editingTask) return;
+    if (!selectedTaskId) return;
 
-    setUpdating(true);
+    setLoadingType("edit");
     try {
-      await tasksApi.updateTask(editingTask._id, formData);
+      await tasksApi.updateTask(selectedTaskId, formData);
       toast({ title: "Task updated" });
       setIsEditDialogOpen(false);
-      setEditingTask(null);
+      setSelectedTaskId(null);
       setFormData(emptyForm);
       fetchTasks(pagination.skip, pagination.limit); // Refresh task list
     } catch (err: any) {
@@ -154,20 +156,20 @@ export default function Tasks() {
         variant: "destructive",
       });
     } finally {
-      setUpdating(false);
+      setLoadingType(null);
     }
   };
 
   const confirmDeleteTask = (taskId: string) => {
-    setTaskToDelete(taskId);
+    setSelectedTaskId(taskId);
     setConfirmDialogOpen(true);
   };
 
   const handleDeleteTask = async () => {
-    if (!taskToDelete) return;
-    setDeleting(true);
+    if (!selectedTaskId) return;
+    setLoadingType("delete");
     try {
-      await tasksApi.deleteTask(taskToDelete);
+      await tasksApi.deleteTask(selectedTaskId);
       toast({ title: "Task deleted" });
       fetchTasks(0, pagination.limit); // Refresh task list
     } catch (err: any) {
@@ -178,14 +180,14 @@ export default function Tasks() {
         variant: "destructive",
       });
     } finally {
-      setDeleting(false);
+      setLoadingType(null);
       setConfirmDialogOpen(false);
-      setTaskToDelete(null);
+      setSelectedTaskId(null);
     }
   };
 
   const openEditDialog = (task: Task) => {
-    setEditingTask(task);
+    setSelectedTaskId(task._id);
     setFormData({
       title: task.title || "",
       description: task.description || "",
@@ -236,6 +238,7 @@ export default function Tasks() {
         </div>
 
         {/* Add Task Dialog */}
+        {/* ToDo: Make This Modal A Reusable Component */}
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -344,9 +347,9 @@ export default function Tasks() {
               <Button
                 onClick={handleAdd}
                 className="w-full"
-                disabled={creating}
+                disabled={loadingType === "add"}
               >
-                {creating ? "Creating…" : "Create Task"}
+                {loadingType === "add" ? "Creating…" : "Create Task"}
               </Button>
             </div>
           </DialogContent>
@@ -367,7 +370,7 @@ export default function Tasks() {
           </TableHeader>
 
           <TableBody>
-            {loading ? (
+            {tasksLoading ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8">
                   <div className="flex justify-center items-center space-x-2">
@@ -448,7 +451,7 @@ export default function Tasks() {
           </TableBody>
         </Table>
         {/* Pagination */}
-        {!loading && tasks && tasks.length ? (
+        {!tasksLoading && tasks && tasks.length ? (
           <div className="flex justify-center items-center gap-2 p-4 border-t">
             {/* Previous Button */}
             <Button
@@ -529,6 +532,7 @@ export default function Tasks() {
       </div>
 
       {/* Edit Dialog */}
+      {/* ToDo: Make This Modal A Reusable Component */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -621,8 +625,12 @@ export default function Tasks() {
               </Select>
             </div>
 
-            <Button onClick={handleEdit} className="w-full" disabled={updating}>
-              {updating ? "Updating…" : "Update Task"}
+            <Button
+              onClick={handleEdit}
+              className="w-full"
+              disabled={loadingType === "edit"}
+            >
+              {loadingType === "edit" ? "Updating…" : "Update Task"}
             </Button>
           </div>
         </DialogContent>
@@ -635,7 +643,7 @@ export default function Tasks() {
         cancelText="Cancel"
         onConfirm={handleDeleteTask}
         onCancel={() => setConfirmDialogOpen(false)}
-        loading={deleting}
+        loading={loadingType === "delete"}
       />
     </div>
   );

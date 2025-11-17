@@ -1,3 +1,5 @@
+import { LogOut } from "lucide-react";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { LogOut } from "lucide-react";
 
 export default function Settings() {
   const { user, logout } = useAuth();
