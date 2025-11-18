@@ -6,6 +6,10 @@ export interface Task {
   description?: string;
   status: TaskStatus;
   priority: TaskPriority;
-  assignedTo?: string;
+  assignedTo?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
   updatedAt: string;
 }

@@ -17,12 +17,21 @@ export const tasksApi = {
   },
 
   // Create a new task
-  createTask: (taskData: Omit<Task, "_id" | "updatedAt">) => {
+  createTask: (
+    taskData: Omit<Task, "_id" | "updatedAt" | "assignedTo"> & {
+      assignedTo?: string;
+    }
+  ) => {
     return axiosClient.post("/tasks", taskData);
   },
 
   // Update an existing task
-  updateTask: (id: string, taskData: Omit<Task, "_id" | "updatedAt">) => {
+  updateTask: (
+    id: string,
+    taskData: Omit<Task, "_id" | "updatedAt" | "assignedTo"> & {
+      assignedTo?: string;
+    }
+  ) => {
     return axiosClient.patch(`/tasks/${id}`, taskData);
   },
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -19,16 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/common/confirmationDialog";
+import { DataTable } from "@/components/common/dataTable";
+
+import { Textarea } from "@/components/ui/textarea";
 
 import { useToast } from "@/hooks/use-toast";
 
@@ -37,8 +33,6 @@ import { userApi } from "@/api/userApi";
 
 import { TaskPriority, TaskStatus } from "@/constants/enum";
 import { Task } from "@/types/task";
-
-import { ConfirmDialog } from "@/components/common/confirmationDialog";
 
 const emptyForm = {
   title: "",
@@ -111,6 +105,7 @@ export default function Tasks() {
     fetchTasks(pagination.skip, pagination.limit);
   }, [pagination.skip, pagination.limit]);
 
+  console.log({ formData, tasks });
   // Handlers for adding, editing, and deleting tasks
   const handleAdd = async () => {
     if (!formData.title?.trim()) {
@@ -358,177 +353,74 @@ export default function Tasks() {
 
       {/* Table */}
       <div className="rounded-lg border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Priority</TableHead>
-              <TableHead>Assigned To</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-
-          <TableBody>
-            {tasksLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
-                  <div className="flex justify-center items-center space-x-2">
-                    <div className="h-4 w-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
-                    <span>Loading tasks...</span>
+        <DataTable
+          loading={tasksLoading}
+          data={tasks}
+          emptyMessage="No tasks available"
+          pagination={{
+            currentPage,
+            totalPages,
+            skip: pagination.skip,
+            limit: pagination.limit,
+            setPagination,
+          }}
+          columns={[
+            {
+              label: "Title",
+              render: (task) => (
+                <div>
+                  <div className="font-medium">{task.title}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {task.description}
                   </div>
-                </TableCell>
-              </TableRow>
-            ) : !tasks || tasks.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="text-center py-8 text-muted-foreground"
-                >
-                  <div className="flex flex-col items-center">
-                    <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-2">
-                      📂
-                    </div>
-                    <p>No tasks available</p>
-                    <p className="text-sm mt-2">
-                      Create your first task using the button above.
-                    </p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              tasks.map((task) => {
-                return (
-                  <TableRow key={task._id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{(task as any).title}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {(task as any).description}
-                        </div>
-                      </div>
-                    </TableCell>
+                </div>
+              ),
+            },
+            {
+              label: "Status",
+              render: (task) => (
+                <Badge variant={getStatusVariant(task.status)}>
+                  {task.status}
+                </Badge>
+              ),
+            },
+            {
+              label: "Priority",
+              render: (task) => (
+                <Badge variant={getPriorityVariant(task.priority)}>
+                  {task.priority}
+                </Badge>
+              ),
+            },
+            {
+              label: "Assigned To",
+              render: (task) => task.assignedTo?.name || "--",
+            },
+            {
+              label: "Actions",
+              className: "text-right",
+              render: (task) => (
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openEditDialog(task)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
 
-                    <TableCell>
-                      <Badge variant={getStatusVariant((task as any).status)}>
-                        {(task as any).status}
-                      </Badge>
-                    </TableCell>
-
-                    <TableCell>
-                      <Badge
-                        variant={getPriorityVariant((task as any).priority)}
-                      >
-                        {(task as any).priority}
-                      </Badge>
-                    </TableCell>
-
-                    <TableCell>{(task as any).assignedTo?.name}</TableCell>
-
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditDialog(task)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => confirmDeleteTask(task._id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-        {/* Pagination */}
-        {!tasksLoading && tasks && tasks.length ? (
-          <div className="flex justify-center items-center gap-2 p-4 border-t">
-            {/* Previous Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setPagination((prev) => ({
-                  ...prev,
-                  skip: Math.max(0, prev.skip - prev.limit),
-                }))
-              }
-              disabled={currentPage === 1}
-            >
-              &lt;
-            </Button>
-
-            {/* Left Ellipsis */}
-            {currentPage > 3 && (
-              <span className="px-2 text-muted-foreground">...</span>
-            )}
-
-            {/* Visible Page Numbers */}
-            {Array.from({ length: 3 }, (_, i) => {
-              let startPage = currentPage;
-
-              // Handle edges
-              if (currentPage <= 2) startPage = 1;
-              else if (currentPage >= totalPages - 1)
-                startPage = totalPages - 2;
-              else startPage = currentPage - 1;
-
-              const pageNum = startPage + i;
-              if (pageNum < 1 || pageNum > totalPages) return null;
-
-              return (
-                <Button
-                  key={pageNum}
-                  variant={pageNum === currentPage ? "default" : "outline"}
-                  size="sm"
-                  onClick={() =>
-                    setPagination((prev) => ({
-                      ...prev,
-                      skip: (pageNum - 1) * prev.limit,
-                    }))
-                  }
-                >
-                  {pageNum}
-                </Button>
-              );
-            })}
-
-            {/* Right Ellipsis */}
-            {currentPage < totalPages - 2 && (
-              <span className="px-2 text-muted-foreground">...</span>
-            )}
-
-            {/* Next Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setPagination((prev) => ({
-                  ...prev,
-                  skip: Math.min(
-                    (totalPages - 1) * prev.limit,
-                    prev.skip + prev.limit
-                  ),
-                }))
-              }
-              disabled={currentPage === totalPages}
-            >
-              &gt;
-            </Button>
-          </div>
-        ) : (
-          ""
-        )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => confirmDeleteTask(task._id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ),
+            },
+          ]}
+        />
       </div>
 
       {/* Edit Dialog */}

@@ -19,17 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "../components/common/confirmationDialog";
+import { DataTable } from "@/components/common/dataTable";
 
 import { useToast } from "@/hooks/use-toast";
 
@@ -343,156 +336,63 @@ export default function Users() {
 
       {/* Users Table */}
       <div className="rounded-lg border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {usersLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
-                  Loading users...
-                </TableCell>
-              </TableRow>
-            ) : users.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="text-center py-8 text-muted-foreground"
+        <DataTable
+          loading={usersLoading}
+          data={users}
+          emptyMessage="No users available"
+          pagination={{
+            currentPage,
+            totalPages,
+            skip: pagination.skip,
+            limit: pagination.limit,
+            setPagination,
+          }}
+          columns={[
+            { label: "Name", render: (u) => u.name },
+            { label: "Email", render: (u) => u.email },
+            {
+              label: "Role",
+              render: (u) => (
+                <Badge variant={u.role === "admin" ? "default" : "secondary"}>
+                  {u.role}
+                </Badge>
+              ),
+            },
+            {
+              label: "Status",
+              render: (u) => (
+                <Badge
+                  variant={u.status === "active" ? "default" : "secondary"}
                 >
-                  No users available
-                </TableCell>
-              </TableRow>
-            ) : (
-              users.map((user) => (
-                <TableRow key={user._id}>
-                  <TableCell className="font-medium">{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={user.role === "admin" ? "default" : "secondary"}
-                    >
-                      {user.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        user.status === "active" ? "default" : "secondary"
-                      }
-                    >
-                      {user.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditDialog(user)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => confirmDeleteUser(user._id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                  {u.status}
+                </Badge>
+              ),
+            },
+            {
+              label: "Actions",
+              className: "text-right",
+              render: (u) => (
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openEditDialog(u)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
 
-        {/* Pagination */}
-        {!usersLoading && users && users.length ? (
-          <div className="flex justify-center items-center gap-2 p-4 border-t">
-            {/* Previous Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setPagination((prev) => ({
-                  ...prev,
-                  skip: Math.max(0, prev.skip - prev.limit),
-                }))
-              }
-              disabled={currentPage === 1}
-            >
-              &lt;
-            </Button>
-
-            {/* Left Ellipsis */}
-            {currentPage > 3 && (
-              <span className="px-2 text-muted-foreground">...</span>
-            )}
-
-            {/* Visible Page Numbers */}
-            {Array.from({ length: 3 }, (_, i) => {
-              let startPage = currentPage;
-
-              // Handle edges
-              if (currentPage <= 2) startPage = 1;
-              else if (currentPage >= totalPages - 1)
-                startPage = totalPages - 2;
-              else startPage = currentPage - 1;
-
-              const pageNum = startPage + i;
-              if (pageNum < 1 || pageNum > totalPages) return null;
-
-              return (
-                <Button
-                  key={pageNum}
-                  variant={pageNum === currentPage ? "default" : "outline"}
-                  size="sm"
-                  onClick={() =>
-                    setPagination((prev) => ({
-                      ...prev,
-                      skip: (pageNum - 1) * prev.limit,
-                    }))
-                  }
-                >
-                  {pageNum}
-                </Button>
-              );
-            })}
-
-            {/* Right Ellipsis */}
-            {currentPage < totalPages - 2 && (
-              <span className="px-2 text-muted-foreground">...</span>
-            )}
-
-            {/* Next Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setPagination((prev) => ({
-                  ...prev,
-                  skip: Math.min(
-                    (totalPages - 1) * prev.limit,
-                    prev.skip + prev.limit
-                  ),
-                }))
-              }
-              disabled={currentPage === totalPages}
-            >
-              &gt;
-            </Button>
-          </div>
-        ) : (
-          ""
-        )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => confirmDeleteUser(u._id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ),
+            },
+          ]}
+        />
       </div>
 
       {/* Edit Dialog */}
