@@ -1,5 +1,7 @@
 import axiosClient from "./axiosClient";
 
+import { Task } from "@/types/task";
+
 // Create or update the base URL for the tasks endpoint
 export const tasksApi = {
   // Get tasks with pagination
@@ -15,12 +17,12 @@ export const tasksApi = {
   },
 
   // Create a new task
-  createTask: (taskData: any) => {
+  createTask: (taskData: Omit<Task, "_id" | "updatedAt">) => {
     return axiosClient.post("/tasks", taskData);
   },
 
   // Update an existing task
-  updateTask: (id: string, taskData: any) => {
+  updateTask: (id: string, taskData: Omit<Task, "_id" | "updatedAt">) => {
     return axiosClient.patch(`/tasks/${id}`, taskData);
   },
 

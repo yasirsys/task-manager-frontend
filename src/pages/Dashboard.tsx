@@ -12,7 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TaskStatus, TaskPriority } from "@/constants/enum";
 
 import { trimText } from "@/utils/textUtils";
-import { CardStatistics, Task } from "@/types/dashboard";
+import { CardStatistics } from "@/types/dashboard";
+import { Task } from "@/types/task";
 
 import { dashboardApi } from "@/api/dashboardApi";
 

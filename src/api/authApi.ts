@@ -9,5 +9,5 @@ export const authApi = {
 
   getProfile: () => axiosClient.get("/auth/profile"),
 
-  logout: () => axiosClient.post("/auth/logout"), // optional if backend supports it
+  logout: () => axiosClient.post("/auth/logout"),
 };

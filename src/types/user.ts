@@ -1,6 +1,6 @@
 import { UserRole, UserStatus } from "../constants/enum";
 
-export type User = {
+export interface User {
   _id: string;
   name: string;
   email: string;
@@ -8,4 +8,4 @@ export type User = {
   status: UserStatus;
   createdAt: string;
   updatedAt: string;
-};
+}
