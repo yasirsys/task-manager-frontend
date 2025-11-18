@@ -2,29 +2,12 @@ import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/common/confirmationDialog";
 import { DataTable } from "@/components/common/dataTable";
 
-import { Textarea } from "@/components/ui/textarea";
+import { TaskFormModal } from "@/components/common/taskFormModal";
 
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,9 +15,10 @@ import { tasksApi } from "@/api/taskApi";
 import { userApi } from "@/api/userApi";
 
 import { TaskPriority, TaskStatus } from "@/constants/enum";
-import { Task } from "@/types/task";
+import { Pagination } from "@/types/shared";
+import { Task, TaskForm } from "@/types/task";
 
-const emptyForm = {
+const emptyForm: TaskForm = {
   title: "",
   description: "",
   status: TaskStatus.PENDING,
@@ -45,13 +29,13 @@ const emptyForm = {
 export default function Tasks() {
   const { toast } = useToast();
 
-  const [formData, setFormData] = useState(emptyForm);
+  const [formData, setFormData] = useState<TaskForm>(emptyForm);
 
   const [users, setUsers] = useState<Array<{ _id: string; name: string }>>([]);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState<boolean>(false);
 
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState<boolean>(false);
 
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [loadingType, setLoadingType] = useState<
@@ -61,7 +45,7 @@ export default function Tasks() {
   // pagination & loading
   const [tasksLoading, setTasksLoading] = useState<boolean>(false);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [pagination, setPagination] = useState({
+  const [pagination, setPagination] = useState<Pagination>({
     skip: 0,
     total: 0,
     totalPages: 0,
@@ -105,7 +89,6 @@ export default function Tasks() {
     fetchTasks(pagination.skip, pagination.limit);
   }, [pagination.skip, pagination.limit]);
 
-  console.log({ formData, tasks });
   // Handlers for adding, editing, and deleting tasks
   const handleAdd = async () => {
     if (!formData.title?.trim()) {
@@ -233,122 +216,23 @@ export default function Tasks() {
         </div>
 
         {/* Add Task Dialog */}
-        {/* ToDo: Make This Modal A Reusable Component */}
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
+        <TaskFormModal
+          open={isAddDialogOpen}
+          setOpen={setIsAddDialogOpen}
+          formData={formData}
+          setFormData={setFormData}
+          onSubmit={handleAdd}
+          loading={loadingType === "add"}
+          title="Add New Task"
+          description="Create a new task and assign it to a team member"
+          triggerButton={
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               Add Task
             </Button>
-          </DialogTrigger>
-
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Task</DialogTitle>
-              <DialogDescription>
-                Create a new task and assign it to a team member
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
-                  placeholder="Enter task title"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  placeholder="Enter task description"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value: Task["status"]) =>
-                      setFormData({ ...formData, status: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="in-progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="priority">Priority</Label>
-                  <Select
-                    value={formData.priority}
-                    onValueChange={(value: Task["priority"]) =>
-                      setFormData({ ...formData, priority: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={TaskPriority.LOW}>Low</SelectItem>
-                      <SelectItem value={TaskPriority.MEDIUM}>
-                        Medium
-                      </SelectItem>
-                      <SelectItem value={TaskPriority.HIGH}>High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="assignedTo">Assigned To</Label>
-                <Select
-                  value={formData.assignedTo}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, assignedTo: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a user" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.map((user) => (
-                      <SelectItem key={user._id} value={user._id}>
-                        {user.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button
-                onClick={handleAdd}
-                className="w-full"
-                disabled={loadingType === "add"}
-              >
-                {loadingType === "add" ? "Creating…" : "Create Task"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          }
+          users={users}
+        />
       </div>
 
       {/* Table */}
@@ -424,109 +308,18 @@ export default function Tasks() {
       </div>
 
       {/* Edit Dialog */}
-      {/* ToDo: Make This Modal A Reusable Component */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Task</DialogTitle>
-            <DialogDescription>Update task details</DialogDescription>
-          </DialogHeader>
+      <TaskFormModal
+        open={isEditDialogOpen}
+        setOpen={setIsEditDialogOpen}
+        formData={formData}
+        setFormData={setFormData}
+        onSubmit={handleEdit}
+        loading={loadingType === "edit"}
+        title="Edit Task"
+        description="Update task details"
+        users={users}
+      />
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-title">Title</Label>
-              <Input
-                id="edit-title"
-                value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-status">Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value: Task["status"]) =>
-                    setFormData({ ...formData, status: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-priority">Priority</Label>
-                <Select
-                  value={formData.priority}
-                  onValueChange={(value: Task["priority"]) =>
-                    setFormData({ ...formData, priority: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="assignedTo">Assigned To</Label>
-              <Select
-                value={formData.assignedTo}
-                onValueChange={(value) => {
-                  setFormData({ ...formData, assignedTo: value });
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a user" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user._id} value={user._id}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button
-              onClick={handleEdit}
-              className="w-full"
-              disabled={loadingType === "edit"}
-            >
-              {loadingType === "edit" ? "Updating…" : "Update Task"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
       <ConfirmDialog
         open={confirmDialogOpen}
         title="Delete Task"

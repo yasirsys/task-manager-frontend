@@ -34,8 +34,8 @@ export default function Dashboard() {
     taskDistribution: {},
   });
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     const fetchData = async () => {

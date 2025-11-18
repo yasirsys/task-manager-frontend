@@ -23,10 +23,10 @@ export default function Signup() {
   const { toast } = useToast();
   const { signup, isLoading } = useAuth();
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [name, setName] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

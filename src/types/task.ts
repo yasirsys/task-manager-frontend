@@ -13,3 +13,11 @@ export interface Task {
   };
   updatedAt: string;
 }
+
+export interface TaskForm {
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  assignedTo?: string; // user ID
+}

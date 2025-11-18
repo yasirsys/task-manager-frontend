@@ -1,28 +1,12 @@
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "../components/common/confirmationDialog";
 import { DataTable } from "@/components/common/dataTable";
+import { UserFormModal } from "@/components/common/UserFormModal";
 
 import { useToast } from "@/hooks/use-toast";
 
@@ -31,9 +15,10 @@ import { isValidEmail, isValidPassword } from "@/utils/validation";
 
 import { userApi } from "@/api/userApi";
 
-import { User } from "@/types/user";
+import { Pagination } from "@/types/shared";
+import { User, UserForm } from "@/types/user";
 
-const emptyState = {
+const emptyState: UserForm = {
   name: "",
   email: "",
   password: "",
@@ -44,22 +29,21 @@ const emptyState = {
 export default function Users() {
   const { toast } = useToast();
 
-  const [formData, setFormData] = useState(emptyState);
+  const [formData, setFormData] = useState<UserForm>(emptyState);
 
   const [users, setUsers] = useState<User[]>([]);
 
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState<boolean>(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false);
 
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState<boolean>(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [loadingType, setLoadingType] = useState<
     "add" | "edit" | "delete" | null
   >(null);
 
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [pagination, setPagination] = useState({
+  const [usersLoading, setUsersLoading] = useState<boolean>(false);
+  const [pagination, setPagination] = useState<Pagination>({
     skip: 0,
     total: 0,
     totalPages: 0,
@@ -218,120 +202,20 @@ export default function Users() {
         </div>
 
         {/* Add User Dialog */}
-        {/* ToDo: Make This Modal Reusable Component */}
-        <Dialog
+        <UserFormModal
+          mode="create"
+          triggerText="Add User"
+          triggerDisabled={usersLoading}
           open={isAddDialogOpen}
           onOpenChange={(value) => {
             if (value) setFormData(emptyState);
             setIsAddDialogOpen(value);
           }}
-        >
-          <DialogTrigger asChild>
-            <Button disabled={usersLoading}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add User
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New User</DialogTitle>
-              <DialogDescription>Create a new user account</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="Enter name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  placeholder="Enter email"
-                />
-              </div>
-              <div className="space-y-2 relative">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  required
-                  minLength={8}
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-9 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role</Label>
-                  <Select
-                    value={formData.role}
-                    onValueChange={(value: User["role"]) =>
-                      setFormData({ ...formData, role: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user">User</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value: User["status"]) =>
-                      setFormData({ ...formData, status: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <Button
-                onClick={handleCreateUser}
-                disabled={loadingType === "add"}
-                className="w-full"
-              >
-                {loadingType === "add" ? "Creating..." : "Create User"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+          formData={formData}
+          setFormData={setFormData}
+          onSubmit={handleCreateUser}
+          loading={loadingType === "add"}
+        />
       </div>
 
       {/* Users Table */}
@@ -396,89 +280,16 @@ export default function Users() {
       </div>
 
       {/* Edit Dialog */}
-      {/* ToDo: Make This Modal Reusable Component */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>Update user details</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Name</Label>
-              <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-email">Email</Label>
-              <Input
-                id="edit-email"
-                type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-password">Password</Label>
-              <Input
-                id="edit-password"
-                type="password"
-                value={"******"}
-                disabled={true}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-role">Role</Label>
-                <Select
-                  value={formData.role}
-                  onValueChange={(value: User["role"]) =>
-                    setFormData({ ...formData, role: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">User</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-status">Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value: User["status"]) =>
-                    setFormData({ ...formData, status: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button
-              onClick={handleUpdateUser}
-              disabled={loadingType === "edit"}
-              className="w-full"
-            >
-              {loadingType === "edit" ? "Updating…" : "Update User"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <UserFormModal
+        mode="edit"
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        formData={formData}
+        setFormData={setFormData}
+        onSubmit={handleUpdateUser}
+        loading={loadingType === "edit"}
+      />
+
       <ConfirmDialog
         open={confirmDialogOpen}
         title="Delete User"
